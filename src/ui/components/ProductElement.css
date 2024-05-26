@@ -1,0 +1,4 @@
+.product-link:hover .product-link__hover,
+.product-link:focus .product-link__hover {
+	display: flex;
+}
