@@ -1,7 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { clsx } from "clsx";
 import { executeGraphQL } from "@/lib/graphql";
-import { CheckoutAddLineDocument, ProductDetailsDocument } from "@/gql/graphql";
+import {
+	CheckoutAddLineDocument,
+	ProductDetailsDocument,
+	type ProductDetailsQuery,
+	type ProductDetailsQueryVariables,
+} from "@/gql/graphql";
 
 export type QuickAddModalProps = {
 	visible: boolean;
@@ -33,16 +38,31 @@ export function QuickAddModal({ visible, onClose, checkoutId, slug }: QuickAddMo
 				setLoading(true);
 				setError(null);
 
-				const { product } = await executeGraphQL(ProductDetailsDocument, {
-					variables: {
-						slug: slug,
+				const response = await executeGraphQL<ProductDetailsQuery, ProductDetailsQueryVariables>(
+					ProductDetailsDocument,
+					{
+						variables: {
+							slug: slug,
+						},
+						revalidate: 60,
 					},
-					revalidate: 60,
-				});
+				);
 
-				setProduct(product);
+				if (response && response.product) {
+					const productData = response.product;
+					const formattedProduct: ProductType = {
+						name: productData.name,
+						variants:
+							productData.variants?.map((variant) => ({
+								id: variant.id,
+								name: variant.name,
+								quantityAvailable: variant.quantityAvailable ?? 0,
+							})) || [],
+					};
+					setProduct(formattedProduct);
+				}
 			} catch (error) {
-				console.error(error);
+				setError(error as Error);
 			} finally {
 				setLoading(false);
 			}
@@ -80,9 +100,6 @@ export function QuickAddModal({ visible, onClose, checkoutId, slug }: QuickAddMo
 		} catch (error) {
 			console.error(error);
 		}
-
-		// cheating to update cart count
-		window.location.reload();
 	};
 
 	return (
@@ -103,7 +120,7 @@ export function QuickAddModal({ visible, onClose, checkoutId, slug }: QuickAddMo
 							{product && (
 								<div className="mt-2">
 									<h2>{product.name}</h2>
-									{product.variants && (
+									{product.variants.length > 0 && (
 										<fieldset className="my-4" role="radiogroup" data-testid="VariantSelector">
 											<legend className="sr-only">Variants</legend>
 											<div className="flex flex-wrap gap-3">

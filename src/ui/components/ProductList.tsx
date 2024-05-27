@@ -1,10 +1,9 @@
 import { cookies } from "next/headers";
 import { ProductElement } from "./ProductElement";
 import { type ProductListItemFragment } from "@/gql/graphql";
-import * as Checkout from "@/lib/checkout";
 
 export const ProductList = async ({ products }: { products: readonly ProductListItemFragment[] }) => {
-	const checkout = await Checkout.findOrCreate(cookies().get("checkoutId")?.value);
+	const checkoutId = cookies().get("checkoutId")?.value || "";
 
 	return (
 		<ul
@@ -18,7 +17,7 @@ export const ProductList = async ({ products }: { products: readonly ProductList
 					product={product}
 					priority={index === 0}
 					loading={index < 3 ? "eager" : "lazy"}
-					checkoutId={checkout.id}
+					checkoutId={checkoutId}
 				/>
 			))}
 		</ul>
